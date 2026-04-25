@@ -5,8 +5,7 @@ export const tabStyles = {
   tabBarInactiveTintColor: Colors.gray,
   headerShown: false,
   tabBarStyle: {
-    position: 'absolute' as const,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: 'white',
     borderTopWidth: 0.5,
     borderTopColor: '#e0e0e0',
   },

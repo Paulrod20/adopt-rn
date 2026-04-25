@@ -2,17 +2,12 @@ import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { tabStyles } from '../../styles/tabStyles';
+import MapScreen from '../map/MapScreen';
 import ShelterListView from '../map/ShelterListView';
 import { mockShelters, Shelter } from '../../models/Shelter';
 
 function SheltersScreen() {
-  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
-  return (
-    <ShelterListView
-      shelters={mockShelters}
-      onSelectShelter={setSelectedShelter}
-    />
-  );
+  return <MapScreen />;
 }
 
 function FavoritesScreen() {
