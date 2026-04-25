@@ -17,6 +17,7 @@ export const authStyles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     color: Colors.adoptBlue,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,

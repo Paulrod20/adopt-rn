@@ -1,11 +1,11 @@
 import React from 'react';
-import LoginView from './components/auth/LoginView';
+import SignUpView from './components/auth/SignUpView';
 
 export default function App() {
   return (
-    <LoginView
-      onLogin={() => console.log('login tapped')}
-      onNavigateToSignUp={() => console.log('sign up tapped')}
+    <SignUpView
+      onSignUp={() => console.log('sign up tapped')}
+      onNavigateToLogin={() => console.log('back to login')}
     />
   );
 }
