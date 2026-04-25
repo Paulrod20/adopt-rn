@@ -3,11 +3,20 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginView from './components/auth/LoginView';
 import SignUpView from './components/auth/SignUpView';
+import MainTabView from './components/tabs/MainTabView';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  if (isAuthenticated) { 
+    return (
+      <NavigationContainer> 
+        <MainTabView />
+      </NavigationContainer>
+    );
+  }
 
   return (
     <NavigationContainer>
