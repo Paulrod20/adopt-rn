@@ -6,7 +6,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { authStyles } from '../../styles/authStyles';
+import { Colors } from '../../constants/Colors';
 
 interface Props {
   onSignUp: () => void;
@@ -23,7 +25,7 @@ export default function SignUpView({ onSignUp, onNavigateToLogin }: Props) {
             style={authStyles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <Text style={authStyles.logo}>🐾</Text>
+            <Ionicons name="paw" size={60} color={Colors.adoptBlue}/>
             <Text style={authStyles.title}>Create your account</Text>
             <Text style={authStyles.subtitle}>Start finding your companion</Text>
 

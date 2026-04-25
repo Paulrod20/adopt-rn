@@ -6,7 +6,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { authStyles } from '../../styles/authStyles';
+import { Colors } from '../../constants/Colors';
 
 // Props are like parameters you pass into a SwiftUI view
 // In Swift: ShelterListView(shelters: shelters, onSelect: handler)
@@ -28,7 +30,7 @@ export default function LoginView({ onLogin, onNavigateToSignUp }: Props) {
       style={authStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Text style={authStyles.logo}>🐾</Text>
+      <Ionicons name="paw" size={60} color={Colors.adoptBlue} />
       <Text style={authStyles.title}>Adopt</Text>
       <Text style={authStyles.subtitle}>Find your perfect companion</Text>
 
