@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { tabStyles } from '../../styles/tabStyles';
+import ShelterListView from '../map/ShelterListView';
+import { mockShelters, Shelter } from '../../models/Shelter';
 
 function SheltersScreen() {
-  const { View, Text } = require('react-native');
+  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Shelters</Text>
-    </View>
+    <ShelterListView
+      shelters={mockShelters}
+      onSelectShelter={setSelectedShelter}
+    />
   );
 }
 
