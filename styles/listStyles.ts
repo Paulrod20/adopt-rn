@@ -4,13 +4,13 @@ import { Colors } from '../constants/Colors';
 export const listStyles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
     backgroundColor: Colors.background,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
     paddingHorizontal: 16,
+    marginTop: 8,
     marginBottom: 12,
   },
   searchBar: {

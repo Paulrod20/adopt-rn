@@ -9,7 +9,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Shelter } from '../../models/Shelter';
 import { listStyles } from '../../styles/listStyles';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Props {
   shelters: Shelter[];
@@ -29,7 +28,7 @@ export default function ShelterListView({ shelters, onSelectShelter }: Props) {
   );
 
   return (
-    <SafeAreaView style={listStyles.container}>
+    <View style={listStyles.container}>
       <Text style={listStyles.title}>Shelters Near You</Text>
 
       {/* This replaces .searchable(text:) from SwiftUI */}
@@ -65,6 +64,6 @@ export default function ShelterListView({ shelters, onSelectShelter }: Props) {
           </TouchableOpacity>
         )}
       />
-    </SafeAreaView>
+    </View>
   );
 }
