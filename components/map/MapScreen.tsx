@@ -1,18 +1,20 @@
 import React, { useRef, useState } from 'react';
-import { View, Animated, PanResponder, Dimensions } from 'react-native';
+import { View, Animated, Dimensions, Modal } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { mockShelters, Shelter } from '../../models/Shelter';
 import { mapStyles } from '../../styles/mapStyles';
 import ShelterListView from './ShelterListView';
+import ShelterDetailView from './ShelterDetailView';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SHEET_PEEK = 115;  // how much shows when collapsed
-const SHEET_EXPANDED = SCREEN_HEIGHT * 0.5; // how tall when expanded
+const SHEET_PEEK = 115;
+const SHEET_EXPANDED = SCREEN_HEIGHT * 0.5;
 
 export default function MapScreen() {
   const sheetHeight = useRef(new Animated.Value(SHEET_PEEK)).current;
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
 
   const toggleSheet = () => {
     const toValue = isExpanded ? SHEET_PEEK : SHEET_EXPANDED;
@@ -24,7 +26,7 @@ export default function MapScreen() {
   };
 
   const handleSelectShelter = (shelter: Shelter) => {
-    console.log('selected:', shelter.name);
+    setSelectedShelter(shelter);
   };
 
   return (
@@ -57,18 +59,29 @@ export default function MapScreen() {
         ))}
       </MapView>
 
-      {/* Custom bottom sheet */}
       <Animated.View style={[mapStyles.sheet, { height: sheetHeight }]}>
-        {/* Drag handle pill — tap to toggle */}
         <View style={mapStyles.handleContainer} onTouchEnd={toggleSheet}>
           <View style={mapStyles.handle} />
         </View>
-
         <ShelterListView
           shelters={mockShelters}
           onSelectShelter={handleSelectShelter}
         />
       </Animated.View>
+
+      {/* Modal slides up when a shelter is tapped — like .sheet in SwiftUI */}
+      <Modal
+        visible={selectedShelter !== null}
+        animationType="slide"
+        onRequestClose={() => setSelectedShelter(null)}
+      >
+        {selectedShelter && (
+          <ShelterDetailView
+            shelter={selectedShelter}
+            onClose={() => setSelectedShelter(null)}
+          />
+        )}
+      </Modal>
     </View>
   );
 }
