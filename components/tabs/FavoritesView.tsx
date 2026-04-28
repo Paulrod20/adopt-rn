@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from '../../services/FavoritesManager';
 import { Colors } from '../../constants/Colors';
@@ -38,7 +38,7 @@ export default function FavoritesView() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={favoritesStyles.list}
           renderItem={({ item }) => (
-            <ReanimatedSwipeable renderRightActions={() => renderRightActions(item.id)}>
+            <Swipeable renderRightActions={() => renderRightActions(item.id)}>
               <View style={favoritesStyles.card}>
                 <View style={favoritesStyles.icon}>
                   <Ionicons name="paw" size={18} color="white" />
@@ -48,7 +48,7 @@ export default function FavoritesView() {
                   <Text style={favoritesStyles.city}>{item.city}</Text>
                 </View>
               </View>
-            </ReanimatedSwipeable>
+            </Swipeable>
           )}
         />
       )}

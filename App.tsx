@@ -17,7 +17,7 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <NavigationContainer>
           {isAuthenticated ? (
-            <MainTabView />
+            <MainTabView onSignOut={() => setIsAuthenticated(false)} />
           ) : (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="Login">

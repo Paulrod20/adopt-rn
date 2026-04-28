@@ -1,32 +1,30 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { tabStyles } from '../../styles/tabStyles';
 import MapScreen from '../map/MapScreen';
 import FavoritesView from '../tabs/FavoritesView';
-import ShelterListView from '../map/ShelterListView';
-import { mockShelters, Shelter } from '../../models/Shelter';
+import SettingsView from '../tabs/SettingsView';
 
-function SheltersScreen() {
-  return <MapScreen />;
-}
-
-function FavoritesScreen() {
-  return <FavoritesView />;
-}
-
-function SettingsScreen() {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Settings</Text>
-    </View>
-  );
+interface Props {
+  onSignOut: () => void;
 }
 
 const Tab = createBottomTabNavigator();
 
-export default function MainTabView() {
+export default function MainTabView({ onSignOut }: Props) {
+  function SheltersScreen() {
+    return <MapScreen onSignOut={onSignOut} />;
+  }
+
+  function FavoritesScreen() {
+    return <FavoritesView />;
+  }
+
+  function SettingsScreen() {
+    return <SettingsView onSignOut={onSignOut} />;
+  }
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
