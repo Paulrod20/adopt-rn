@@ -72,4 +72,11 @@ export const detailStyles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  favoriteButton: {
+    position: 'absolute',
+    right: 16,
+    top: 60,
+    zIndex: 10,
+    padding: 8,
+  },
 });

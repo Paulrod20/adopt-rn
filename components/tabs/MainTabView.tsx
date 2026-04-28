@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { tabStyles } from '../../styles/tabStyles';
 import MapScreen from '../map/MapScreen';
+import FavoritesView from '../tabs/FavoritesView';
 import ShelterListView from '../map/ShelterListView';
 import { mockShelters, Shelter } from '../../models/Shelter';
 
@@ -11,12 +12,7 @@ function SheltersScreen() {
 }
 
 function FavoritesScreen() {
-  const { View, Text } = require('react-native');
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Favorites</Text>
-    </View>
-  );
+  return <FavoritesView />;
 }
 
 function SettingsScreen() {

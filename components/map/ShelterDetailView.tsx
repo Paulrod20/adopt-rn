@@ -8,6 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Shelter } from '../../models/Shelter';
 import { detailStyles } from '../../styles/detailStyles';
+import { useFavorites } from '../../services/FavoritesManager';
 
 interface Props {
   shelter: Shelter;
@@ -15,6 +16,9 @@ interface Props {
 }
 
 export default function ShelterDetailView({ shelter, onClose }: Props) {
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
+  const favorited = isFavorite(shelter.id);
+
   return (
     <View style={detailStyles.container}>
       {/* Header */}
@@ -22,7 +26,21 @@ export default function ShelterDetailView({ shelter, onClose }: Props) {
         <TouchableOpacity onPress={onClose} style={detailStyles.closeButton}>
           <Ionicons name="chevron-down" size={24} color="gray" />
         </TouchableOpacity>
+
         <Text style={detailStyles.title}>{shelter.name}</Text>
+
+        <TouchableOpacity
+          style={detailStyles.favoriteButton}
+          onPress={() =>
+            favorited ? removeFavorite(shelter.id) : addFavorite(shelter)
+          }
+        >
+          <Ionicons
+            name={favorited ? 'heart' : 'heart-outline'}
+            size={24}
+            color={favorited ? 'red' : 'gray'}
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={detailStyles.content}>
