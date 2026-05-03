@@ -18,6 +18,8 @@ interface Props {
 export default function ShelterDetailView({ shelter, onClose }: Props) {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const favorited = isFavorite(shelter.id);
+  const hasAddress = !!shelter.address;
+  const hasPhone = !!shelter.phone;
 
   return (
     <View style={detailStyles.container}>
@@ -51,23 +53,31 @@ export default function ShelterDetailView({ shelter, onClose }: Props) {
 
         {/* Info rows */}
         <View style={detailStyles.infoCard}>
-          <View style={detailStyles.infoRow}>
-            <Ionicons name="location" size={20} color="gray" />
-            <Text style={detailStyles.infoText}>{shelter.address}</Text>
-          </View>
+          {hasAddress ? (
+            <View style={detailStyles.infoRow}>
+              <Ionicons name="location" size={20} color="gray" />
+              <Text style={detailStyles.infoText}>{shelter.address}</Text>
+            </View>
+          ) : null}
 
-          <View style={detailStyles.divider} />
+          {hasPhone ? (
+            <>
+              {hasAddress ? <View style={detailStyles.divider} /> : null}
+              <View style={detailStyles.infoRow}>
+                <Ionicons name="call" size={20} color="gray" />
+                <Text style={detailStyles.infoText}>{shelter.phone}</Text>
+              </View>
+            </>
+          ) : null}
 
-          <View style={detailStyles.infoRow}>
-            <Ionicons name="call" size={20} color="gray" />
-            <Text style={detailStyles.infoText}>{shelter.phone}</Text>
-          </View>
-
-          <View style={detailStyles.divider} />
+          {hasAddress || hasPhone ? <View style={detailStyles.divider} /> : null}
 
           <View style={detailStyles.infoRow}>
             <Ionicons name="map" size={20} color="gray" />
-            <Text style={detailStyles.infoText}>{shelter.city}</Text>
+            <Text style={detailStyles.infoText}>
+              {shelter.city}
+              {shelter.state ? `, ${shelter.state}` : ''}
+            </Text>
           </View>
         </View>
 

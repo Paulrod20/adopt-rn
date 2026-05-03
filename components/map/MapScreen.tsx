@@ -1,10 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Animated, Dimensions, Modal, TouchableOpacity, Text } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { mockShelters, Shelter } from '../../models/Shelter';
+import { Shelter } from '../../models/Shelter';
+import {
+  fetchShelters,
+  getDistanceMiles,
+  mapRGShelterToShelter,
+  RGShelter,
+} from '../../services/RescueGroupsService';
 import { mapStyles } from '../../styles/mapStyles';
 import ShelterListView from './ShelterListView';
 import ShelterDetailView from './ShelterDetailView';
@@ -13,47 +19,169 @@ import SettingsView from '../tabs/SettingsView';
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_PEEK = 115;
 const SHEET_EXPANDED = SCREEN_HEIGHT * 0.5;
+const MAX_DISTANCE_MILES = 50;
+const API_PAGE_SIZE = 250;
+const MIN_NEARBY_RESULTS = 5;
 
-interface Props {
-  onSignOut: () => void;
-}
+const DEFAULT_REGION = {
+  latitude: 35.2271,
+  longitude: -80.8431,
+  latitudeDelta: 0.15,
+  longitudeDelta: 0.15,
+};
 
-export default function MapScreen({ onSignOut }: Props) {
+const hasCoordinates = (s: RGShelter) => {
+  const lat = s.attributes.lat ?? s.attributes.latitude;
+  const lon = s.attributes.lon ?? s.attributes.longitude;
+  return lat != null && lon != null;
+};
+
+const mapValidShelters = (items: RGShelter[]) =>
+  items.filter(hasCoordinates).map(mapRGShelterToShelter);
+
+const dedupeShelters = (items: Shelter[]) => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
+export default function MapScreen({ onSignOut }: { onSignOut: () => void }) {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const mapRef = useRef<MapView | null>(null);
   const sheetHeight = useRef(new Animated.Value(SHEET_PEEK)).current;
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [shelters, setShelters] = useState<Shelter[]>([]);
+
+  useEffect(() => {
+    loadShelters();
+  }, []);
+
+  const loadShelters = async () => {
+    let postalCode = '28201';
+    let userLatitude: number | null = null;
+    let userLongitude: number | null = null;
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({});
+        userLatitude = pos.coords.latitude;
+        userLongitude = pos.coords.longitude;
+
+        mapRef.current?.animateToRegion({
+          latitude: userLatitude,
+          longitude: userLongitude,
+          latitudeDelta: 0.15,
+          longitudeDelta: 0.15,
+        }, 400);
+
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+
+        if (geocode[0]?.postalCode) postalCode = geocode[0].postalCode;
+      }
+    } catch (error) {
+      console.error('Location failed, using Charlotte fallback:', error);
+    }
+
+    const pageOneShelters = await fetchShelters(postalCode, {
+      limit: API_PAGE_SIZE,
+      page: 1,
+      distance: MAX_DISTANCE_MILES,
+    });
+
+    let mapped = mapValidShelters(pageOneShelters);
+
+    if (userLatitude != null && userLongitude != null) {
+      let nearby = mapped.filter(
+        (shelter) =>
+          getDistanceMiles(
+            userLatitude,
+            userLongitude,
+            shelter.latitude,
+            shelter.longitude
+          ) <= MAX_DISTANCE_MILES
+      );
+
+      // Backup 1: if first page is sparse, sample one more page before falling back.
+      if (nearby.length < MIN_NEARBY_RESULTS) {
+        const pageTwoShelters = await fetchShelters(postalCode, {
+          limit: API_PAGE_SIZE,
+          page: 2,
+          distance: MAX_DISTANCE_MILES,
+        });
+
+        const combined = dedupeShelters([
+          ...mapped,
+          ...mapValidShelters(pageTwoShelters),
+        ]);
+
+        nearby = combined.filter(
+          (shelter) =>
+            getDistanceMiles(
+              userLatitude as number,
+              userLongitude as number,
+              shelter.latitude,
+              shelter.longitude
+            ) <= MAX_DISTANCE_MILES
+        );
+
+        mapped = combined;
+      }
+
+      if (nearby.length > 0) {
+        mapped = nearby;
+      } else {
+        // Backup 2: present the closest available options from fetched data.
+        mapped = mapped
+          .slice()
+          .sort(
+            (a, b) =>
+              getDistanceMiles(userLatitude, userLongitude, a.latitude, a.longitude) -
+              getDistanceMiles(userLatitude, userLongitude, b.latitude, b.longitude)
+          )
+          .slice(0, 25);
+      }
+    }
+
+    if (mapped.length === 0) {
+      const fallback = await fetchShelters('28201', {
+        limit: API_PAGE_SIZE,
+        page: 1,
+        distance: MAX_DISTANCE_MILES,
+      });
+      mapped = mapValidShelters(fallback);
+    }
+
+    setShelters(mapped);
+  };
 
   const toggleSheet = () => {
     const toValue = isExpanded ? SHEET_PEEK : SHEET_EXPANDED;
-    Animated.spring(sheetHeight, {
-      toValue,
-      useNativeDriver: false,
-    }).start();
+    Animated.spring(sheetHeight, { toValue, useNativeDriver: false }).start();
     setIsExpanded(!isExpanded);
-  };
-
-  const handleSelectShelter = (shelter: Shelter) => {
-    setSelectedShelter(shelter);
   };
 
   return (
     <View style={mapStyles.container}>
       <MapView
+        ref={(ref) => { mapRef.current = ref; }}
         style={mapStyles.map}
-        initialRegion={{
-          latitude: 35.2271,
-          longitude: -80.8431,
-          latitudeDelta: 0.15,
-          longitudeDelta: 0.15,
-        }}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
+        initialRegion={DEFAULT_REGION}
+        showsUserLocation
+        showsMyLocationButton
       >
-        {mockShelters.map((shelter) => (
+        {shelters.map((shelter) => (
           <Marker
             key={shelter.id}
             coordinate={{
@@ -70,7 +198,6 @@ export default function MapScreen({ onSignOut }: Props) {
         ))}
       </MapView>
 
-      {/* Profile button */}
       <TouchableOpacity
         style={[mapStyles.profileButton, { top: insets.top + 12 }]}
         onPress={() => setShowMenu(true)}
@@ -78,7 +205,6 @@ export default function MapScreen({ onSignOut }: Props) {
         <Ionicons name="person" size={20} color="white" />
       </TouchableOpacity>
 
-      {/* Dropdown menu */}
       <Modal
         visible={showMenu}
         transparent
@@ -117,7 +243,6 @@ export default function MapScreen({ onSignOut }: Props) {
         </TouchableOpacity>
       </Modal>
 
-      {/* Settings modal */}
       <Modal
         visible={showSettings}
         animationType="slide"
@@ -129,13 +254,13 @@ export default function MapScreen({ onSignOut }: Props) {
         }} />
       </Modal>
 
-      <Animated.View style={[mapStyles.sheet, { height: sheetHeight, bottom: tabBarHeight }]}>
+      <Animated.View style={[mapStyles.sheet, { height: sheetHeight }]}>
         <View style={mapStyles.handleContainer} onTouchEnd={toggleSheet}>
           <View style={mapStyles.handle} />
         </View>
         <ShelterListView
-          shelters={mockShelters}
-          onSelectShelter={handleSelectShelter}
+          shelters={shelters}
+          onSelectShelter={setSelectedShelter}
         />
       </Animated.View>
 

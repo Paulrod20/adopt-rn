@@ -58,7 +58,7 @@ export default function ShelterListView({ shelters, onSelectShelter }: Props) {
             </View>
             <View style={listStyles.info}>
               <Text style={listStyles.name}>{item.name}</Text>
-              <Text style={listStyles.city}>{item.city}</Text>
+              <Text style={listStyles.city}>{item.city}, {item.state}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="gray" />
           </TouchableOpacity>
