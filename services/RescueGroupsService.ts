@@ -1,4 +1,5 @@
 import { Shelter } from "../models/Shelter";
+import { Animal } from "../models/Animal";
 
 const API_KEY = process.env.EXPO_PUBLIC_RESCUE_GROUPS_API_KEY;
 const BASE_URL = 'https://api.rescuegroups.org/v5/public';
@@ -48,6 +49,15 @@ export interface FetchSheltersOptions {
   distance?: number;
 }
 
+async function readErrorPayload(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    return text || '(empty response body)';
+  } catch {
+    return '(unable to read response body)';
+  }
+}
+
 // Converts API shape to our app's Shelter shape
 export function mapRGShelterToShelter(s: RGShelter): Shelter {
   const latitude = s.attributes.lat ?? s.attributes.latitude ?? 0;
@@ -65,6 +75,21 @@ export function mapRGShelterToShelter(s: RGShelter): Shelter {
     longitude,
   };
 }
+export function mapRGAnimalToAnimal(a: RGAnimal, orgId: string): Animal {
+    return {
+      id: a.id,
+      name: a.attributes.name ?? 'Unknown',
+      species: a.attributes.species ?? '',
+      breed: a.attributes.breedPrimary ?? '',
+      age: a.attributes.age ?? '',
+      sex: a.attributes.sex ?? '',
+      description: a.attributes.description ?? '',
+      thumbnailUrl: a.attributes.pictureThumbnail ?? '',
+      fullImageUrl: a.attributes.pictureFull ?? '',
+      status: a.attributes.status ?? '',
+      orgId,
+    };
+  }
 
 // Haversine formula distance in miles between two coordinate pairs.
 export function getDistanceMiles(
@@ -100,8 +125,9 @@ export async function fetchShelters(
     const distance = options.distance ?? 50;
 
     try {
+      const url = `${BASE_URL}/orgs?limit=${limit}&page=${page}&postalcode=${postalCode}&distance=${distance}`;
       const response = await fetch(
-        `${BASE_URL}/orgs?limit=${limit}&page=${page}&postalcode=${postalCode}&distance=${distance}`,
+        url,
         {
           method: 'GET',
           headers: {
@@ -112,7 +138,17 @@ export async function fetchShelters(
       );
         
       if (!response.ok) {
-        console.error('API error:', response.status, response.statusText);
+        const payload = await readErrorPayload(response);
+        console.error('fetchShelters API error', {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          postalCode,
+          limit,
+          page,
+          distance,
+          payload,
+        });
         return [];
       }
   
@@ -131,26 +167,35 @@ export async function fetchAnimals(orgId: string): Promise<RGAnimal[]> {
     return [];
   }
 
-    try { 
-        const response = await fetch(`${BASE_URL}/animals/search/available/orgs/${orgId}?limit=25`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': API_KEY!,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
+  try {
+    const url = `${BASE_URL}/animals/search/available?limit=25&filter[orgId]=${encodeURIComponent(orgId)}`;
+    const response = await fetch(
+      url,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': API_KEY!,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-        if (!response.ok) {
-            console.error('API error:', response.status, response.statusText);
-            return [];
-          }
-
-        const data = await response.json();
-        return data.data ?? [];
-    } catch (error) { 
-        console.error('error fetching animals:', error)
-        return [];
+    if (!response.ok) {
+      const payload = await readErrorPayload(response);
+      console.error('fetchAnimals API error', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        orgId,
+        payload,
+      });
+      return [];
     }
+
+    const data = await response.json();
+    return data.data ?? [];
+  } catch (error) {
+    console.error('error fetching animals:', error);
+    return [];
+  }
 }

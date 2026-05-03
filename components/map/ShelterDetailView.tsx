@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Shelter } from '../../models/Shelter';
+import { Animal } from '../../models/Animal';
+import AnimalListView from './AnimalListView';
 import { detailStyles } from '../../styles/detailStyles';
 import { useFavorites } from '../../services/FavoritesManager';
 
@@ -20,6 +23,13 @@ export default function ShelterDetailView({ shelter, onClose }: Props) {
   const favorited = isFavorite(shelter.id);
   const hasAddress = !!shelter.address;
   const hasPhone = !!shelter.phone;
+  const [showAnimals, setShowAnimals] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
+
+  const handleCloseAnimals = () => {
+    setShowAnimals(false);
+    setSelectedAnimal(null);
+  };
 
   return (
     <View style={detailStyles.container}>
@@ -82,10 +92,26 @@ export default function ShelterDetailView({ shelter, onClose }: Props) {
         </View>
 
         {/* Visit button */}
-        <TouchableOpacity style={detailStyles.button}>
+        <TouchableOpacity
+          style={detailStyles.button}
+          onPress={() => setShowAnimals(true)}
+        >
           <Text style={detailStyles.buttonText}>View Animals</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={showAnimals}
+        animationType="slide"
+        onRequestClose={handleCloseAnimals}
+      >
+        <AnimalListView
+          shelterId={shelter.id}
+          shelterName={shelter.name}
+          onSelectAnimal={(animal) => setSelectedAnimal(animal)}
+          onClose={handleCloseAnimals}
+        />
+      </Modal>
     </View>
   );
 }
