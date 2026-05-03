@@ -36,13 +36,10 @@ export interface RGAnimal {
       sex?: string;
       ageString?: string;
       ageGroup?: string;
-      species?: string;
       breedPrimary?: string;
       breedString?: string;
       descriptionText?: string;
       pictureThumbnailUrl?: string;
-      pictureFullsizeUrl?: string;
-      status?: string;
     };
   }
 
@@ -79,17 +76,20 @@ export function mapRGShelterToShelter(s: RGShelter): Shelter {
   };
 }
 export function mapRGAnimalToAnimal(a: RGAnimal, orgId: string): Animal {
+    const thumbnail = a.attributes.pictureThumbnailUrl ?? '';
+    // API only returns a thumbnail URL with ?width=100 — strip it to get full-size
+    const fullImage = thumbnail ? thumbnail.replace(/\?.*$/, '') : '';
     return {
       id: a.id,
       name: a.attributes.name ?? 'Unknown',
-      species: a.attributes.species ?? '',
+      species: '',
       breed: a.attributes.breedString ?? a.attributes.breedPrimary ?? '',
       age: a.attributes.ageString ?? a.attributes.ageGroup ?? '',
       sex: a.attributes.sex ?? '',
       description: decodeHtmlEntities(a.attributes.descriptionText ?? ''),
-      thumbnailUrl: a.attributes.pictureThumbnailUrl ?? '',
-      fullImageUrl: a.attributes.pictureFullsizeUrl ?? '',
-      status: a.attributes.status ?? '',
+      thumbnailUrl: thumbnail,
+      fullImageUrl: fullImage,
+      status: '',
       orgId,
     };
   }

@@ -42,6 +42,7 @@ export default function AnimalListView({ shelterId, shelterName, onSelectAnimal,
     fetchAnimals(shelterId)
       .then((raw) => {
         if (cancelled) return;
+        console.log('First animal urls:', raw[0]?.attributes?.pictureThumbnailUrl, raw[0]?.attributes?.pictureFullsizeUrl);
         setAnimals(raw.map((a) => mapRGAnimalToAnimal(a, shelterId)));
       })
       .catch((error) => {
