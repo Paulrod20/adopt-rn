@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Animated, Dimensions, Modal, TouchableOpacity, Text } from 'react-native';
+import { View, Animated, Dimensions, Modal, TouchableOpacity, Text, TextInput } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -52,16 +52,149 @@ export default function MapScreen({ onSignOut }: { onSignOut: () => void }) {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView | null>(null);
   const sheetHeight = useRef(new Animated.Value(SHEET_PEEK)).current;
+  const lastSearchRequestId = useRef(0);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedShelter, setSelectedShelter] = useState<Shelter | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [shelters, setShelters] = useState<Shelter[]>([]);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     loadShelters();
   }, []);
+
+  useEffect(() => {
+    const trimmed = searchText.trim();
+    const requestId = ++lastSearchRequestId.current;
+
+    const timeout = setTimeout(() => {
+      if (requestId !== lastSearchRequestId.current) return;
+
+      if (trimmed === '') {
+        loadShelters();
+      } else {
+        loadSheltersForSearch(trimmed, requestId);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [searchText]);
+
+  const fetchNearbyShelters = async (
+    postalCode: string,
+    centerLatitude: number,
+    centerLongitude: number
+  ) => {
+    const pageOneShelters = await fetchShelters(postalCode, {
+      limit: API_PAGE_SIZE,
+      page: 1,
+      distance: MAX_DISTANCE_MILES,
+    });
+
+    let mapped = mapValidShelters(pageOneShelters);
+    let nearby = mapped.filter(
+      (shelter) =>
+        getDistanceMiles(
+          centerLatitude,
+          centerLongitude,
+          shelter.latitude,
+          shelter.longitude
+        ) <= MAX_DISTANCE_MILES
+    );
+
+    if (nearby.length < MIN_NEARBY_RESULTS) {
+      const pageTwoShelters = await fetchShelters(postalCode, {
+        limit: API_PAGE_SIZE,
+        page: 2,
+        distance: MAX_DISTANCE_MILES,
+      });
+
+      const combined = dedupeShelters([
+        ...mapped,
+        ...mapValidShelters(pageTwoShelters),
+      ]);
+
+      nearby = combined.filter(
+        (shelter) =>
+          getDistanceMiles(
+            centerLatitude,
+            centerLongitude,
+            shelter.latitude,
+            shelter.longitude
+          ) <= MAX_DISTANCE_MILES
+      );
+
+      mapped = combined;
+    }
+
+    if (nearby.length > 0) {
+      return nearby;
+    }
+
+    return mapped
+      .slice()
+      .sort(
+        (a, b) =>
+          getDistanceMiles(centerLatitude, centerLongitude, a.latitude, a.longitude) -
+          getDistanceMiles(centerLatitude, centerLongitude, b.latitude, b.longitude)
+      )
+      .slice(0, 25);
+  };
+
+  const loadSheltersForSearch = async (query: string, requestId: number) => {
+    try {
+      const geocode = await Location.geocodeAsync(query);
+      if (!geocode.length) {
+        if (requestId === lastSearchRequestId.current) {
+          setShelters([]);
+        }
+        return;
+      }
+
+      const centerLatitude = geocode[0].latitude;
+      const centerLongitude = geocode[0].longitude;
+
+      mapRef.current?.animateToRegion(
+        {
+          latitude: centerLatitude,
+          longitude: centerLongitude,
+          latitudeDelta: 0.2,
+          longitudeDelta: 0.2,
+        },
+        400
+      );
+
+      const reverse = await Location.reverseGeocodeAsync({
+        latitude: centerLatitude,
+        longitude: centerLongitude,
+      });
+
+      const searchPostalCode = reverse[0]?.postalCode;
+      if (!searchPostalCode) {
+        if (requestId === lastSearchRequestId.current) {
+          setShelters([]);
+        }
+        return;
+      }
+
+      const mapped = await fetchNearbyShelters(
+        searchPostalCode,
+        centerLatitude,
+        centerLongitude
+      );
+
+      if (requestId === lastSearchRequestId.current) {
+        setShelters(mapped);
+      }
+    } catch (error) {
+      console.error('Search geocode failed:', error);
+      if (requestId === lastSearchRequestId.current) {
+        setShelters([]);
+      }
+    }
+  };
 
   const loadShelters = async () => {
     let postalCode = '28201';
@@ -94,64 +227,17 @@ export default function MapScreen({ onSignOut }: { onSignOut: () => void }) {
       console.error('Location failed, using Charlotte fallback:', error);
     }
 
-    const pageOneShelters = await fetchShelters(postalCode, {
-      limit: API_PAGE_SIZE,
-      page: 1,
-      distance: MAX_DISTANCE_MILES,
-    });
-
-    let mapped = mapValidShelters(pageOneShelters);
+    let mapped: Shelter[] = [];
 
     if (userLatitude != null && userLongitude != null) {
-      let nearby = mapped.filter(
-        (shelter) =>
-          getDistanceMiles(
-            userLatitude,
-            userLongitude,
-            shelter.latitude,
-            shelter.longitude
-          ) <= MAX_DISTANCE_MILES
-      );
-
-      // Backup 1: if first page is sparse, sample one more page before falling back.
-      if (nearby.length < MIN_NEARBY_RESULTS) {
-        const pageTwoShelters = await fetchShelters(postalCode, {
-          limit: API_PAGE_SIZE,
-          page: 2,
-          distance: MAX_DISTANCE_MILES,
-        });
-
-        const combined = dedupeShelters([
-          ...mapped,
-          ...mapValidShelters(pageTwoShelters),
-        ]);
-
-        nearby = combined.filter(
-          (shelter) =>
-            getDistanceMiles(
-              userLatitude as number,
-              userLongitude as number,
-              shelter.latitude,
-              shelter.longitude
-            ) <= MAX_DISTANCE_MILES
-        );
-
-        mapped = combined;
-      }
-
-      if (nearby.length > 0) {
-        mapped = nearby;
-      } else {
-        // Backup 2: present the closest available options from fetched data.
-        mapped = mapped
-          .slice()
-          .sort(
-            (a, b) =>
-              getDistanceMiles(userLatitude, userLongitude, a.latitude, a.longitude) -
-              getDistanceMiles(userLatitude, userLongitude, b.latitude, b.longitude)
-          )
-          .slice(0, 25);
-      }
+      mapped = await fetchNearbyShelters(postalCode, userLatitude, userLongitude);
+    } else {
+      const fallbackToPostal = await fetchShelters(postalCode, {
+        limit: API_PAGE_SIZE,
+        page: 1,
+        distance: MAX_DISTANCE_MILES,
+      });
+      mapped = mapValidShelters(fallbackToPostal);
     }
 
     if (mapped.length === 0) {
@@ -204,6 +290,19 @@ export default function MapScreen({ onSignOut }: { onSignOut: () => void }) {
       >
         <Ionicons name="person" size={20} color="white" />
       </TouchableOpacity>
+
+      {/* Floating search bar */}
+      <View style={[mapStyles.searchContainer, { top: insets.top + 12 }]}> 
+        <Ionicons name="search" size={16} color="gray" />
+        <TextInput
+          style={mapStyles.searchInput}
+          placeholder="Search by city or shelter name..."
+          value={searchText}
+          onChangeText={setSearchText}
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+        />
+      </View>
 
       <Modal
         visible={showMenu}

@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   FlatList,
   TouchableOpacity,
 } from 'react-native';
@@ -15,37 +14,18 @@ interface Props {
   onSelectShelter: (shelter: Shelter) => void;
 }
 
-export default function ShelterListView({ shelters, onSelectShelter }: Props) {
-  // @State var searchText = "" in Swift
-  const [searchText, setSearchText] = useState('');
-
-  // Same filter logic as your Swift filteredShelters computed property
-  const filteredShelters = shelters.filter(
-    (s) =>
-      searchText === '' ||
-      s.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      s.city.toLowerCase().includes(searchText.toLowerCase())
-  );
+export default function ShelterListView({
+  shelters,
+  onSelectShelter,
+}: Props) {
 
   return (
     <View style={listStyles.container}>
       <Text style={listStyles.title}>Shelters Near You</Text>
 
-      {/* This replaces .searchable(text:) from SwiftUI */}
-      <View style={listStyles.searchBar}>
-        <Ionicons name="search" size={16} color="gray" />
-        <TextInput
-          style={listStyles.searchInput}
-          placeholder="Search shelters..."
-          value={searchText}
-          onChangeText={setSearchText}
-          clearButtonMode="while-editing"
-        />
-      </View>
-
       {/* FlatList = List { ForEach } in SwiftUI */}
       <FlatList
-        data={filteredShelters}
+        data={shelters}
         keyExtractor={(item) => item.id}
         contentContainerStyle={listStyles.list}
         renderItem={({ item }) => (
