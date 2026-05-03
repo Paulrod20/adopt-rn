@@ -106,6 +106,7 @@ export default function ShelterDetailView({ shelter, onClose }: Props) {
         onRequestClose={handleCloseAnimals}
       >
         <AnimalListView
+          key={shelter.id}
           shelterId={shelter.id}
           shelterName={shelter.name}
           onSelectAnimal={(animal) => setSelectedAnimal(animal)}

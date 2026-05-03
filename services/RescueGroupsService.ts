@@ -1,5 +1,6 @@
 import { Shelter } from "../models/Shelter";
 import { Animal } from "../models/Animal";
+import { decodeHtmlEntities } from "../helpers/texthelper";
 
 const API_KEY = process.env.EXPO_PUBLIC_RESCUE_GROUPS_API_KEY;
 const BASE_URL = 'https://api.rescuegroups.org/v5/public';
@@ -28,20 +29,22 @@ export interface RGShelter {
     };
 }
 
-export interface RGAnimal { 
+export interface RGAnimal {
     id: string;
     attributes: {
-        name: string;
-        sex: string;
-        age: string;
-        species: string;
-        breedPrimary: string;
-        description: string;
-        pictureThumbnail: string;
-        pictureFull: string;
-        status: string;
+      name?: string;
+      sex?: string;
+      ageString?: string;
+      ageGroup?: string;
+      species?: string;
+      breedPrimary?: string;
+      breedString?: string;
+      descriptionText?: string;
+      pictureThumbnailUrl?: string;
+      pictureFullsizeUrl?: string;
+      status?: string;
     };
-}
+  }
 
 export interface FetchSheltersOptions {
   limit?: number;
@@ -80,12 +83,12 @@ export function mapRGAnimalToAnimal(a: RGAnimal, orgId: string): Animal {
       id: a.id,
       name: a.attributes.name ?? 'Unknown',
       species: a.attributes.species ?? '',
-      breed: a.attributes.breedPrimary ?? '',
-      age: a.attributes.age ?? '',
+      breed: a.attributes.breedString ?? a.attributes.breedPrimary ?? '',
+      age: a.attributes.ageString ?? a.attributes.ageGroup ?? '',
       sex: a.attributes.sex ?? '',
-      description: a.attributes.description ?? '',
-      thumbnailUrl: a.attributes.pictureThumbnail ?? '',
-      fullImageUrl: a.attributes.pictureFull ?? '',
+      description: decodeHtmlEntities(a.attributes.descriptionText ?? ''),
+      thumbnailUrl: a.attributes.pictureThumbnailUrl ?? '',
+      fullImageUrl: a.attributes.pictureFullsizeUrl ?? '',
       status: a.attributes.status ?? '',
       orgId,
     };
@@ -168,7 +171,8 @@ export async function fetchAnimals(orgId: string): Promise<RGAnimal[]> {
   }
 
   try {
-    const url = `${BASE_URL}/animals/search/available?limit=25&filter[orgId]=${encodeURIComponent(orgId)}`;
+    const url = `${BASE_URL}/orgs/${encodeURIComponent(orgId)}/animals/search/available?limit=25`;
+    console.log('[fetchAnimals] orgId:', orgId, 'url:', url);
     const response = await fetch(
       url,
       {

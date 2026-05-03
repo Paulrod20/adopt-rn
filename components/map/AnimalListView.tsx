@@ -7,12 +7,14 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animal } from '../../models/Animal';
 import { fetchAnimals, mapRGAnimalToAnimal } from '../../services/RescueGroupsService';
 import { animalListStyles } from '../../styles/animalListStyles';
+import AnimalProfileView from './AnimalProfileView';
 
 interface Props {
   shelterId: string;
@@ -25,25 +27,33 @@ export default function AnimalListView({ shelterId, shelterName, onSelectAnimal,
   const insets = useSafeAreaInsets();
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
 
   const headerTopInset =
     Platform.OS === 'ios' ? Math.max(insets.top, 44) : Math.max(insets.top, 12);
 
   useEffect(() => {
-    loadAnimals();
-  }, []);
+    let cancelled = false;
 
-  const loadAnimals = async () => {
-    try {
-      const raw = await fetchAnimals(shelterId);
-      const mapped = raw.map((a) => mapRGAnimalToAnimal(a, shelterId));
-      setAnimals(mapped);
-    } catch (error) {
-      console.error('Error loading animals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log('[AnimalListView] loading animals for shelterId:', shelterId);
+    setAnimals([]);
+    setLoading(true);
+
+    fetchAnimals(shelterId)
+      .then((raw) => {
+        if (cancelled) return;
+        setAnimals(raw.map((a) => mapRGAnimalToAnimal(a, shelterId)));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Error loading animals:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [shelterId]);
 
   return (
     <SafeAreaView style={animalListStyles.container}>
@@ -80,7 +90,9 @@ export default function AnimalListView({ shelterId, shelterName, onSelectAnimal,
           renderItem={({ item }) => (
             <TouchableOpacity
               style={animalListStyles.card}
-              onPress={() => onSelectAnimal(item)}
+              onPress={() => {
+                setSelectedAnimal(item);
+              }}
             >
               {item.thumbnailUrl ? (
                 <Image
@@ -104,6 +116,20 @@ export default function AnimalListView({ shelterId, shelterName, onSelectAnimal,
           )}
         />
       )}
+
+      <Modal
+        visible={selectedAnimal !== null}
+        animationType="slide"
+        onRequestClose={() => setSelectedAnimal(null)}
+      >
+        {selectedAnimal && (
+          <AnimalProfileView
+            animal={selectedAnimal}
+            onClose={() => setSelectedAnimal(null)}
+            onBookAppointment={() => console.log('book appointment')}
+          />
+        )}
+      </Modal>
     </SafeAreaView>
   );
 }
